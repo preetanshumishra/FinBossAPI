@@ -5,7 +5,9 @@ dotenv.config();
 
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import { connectDatabase } from './config/database';
+import { swaggerSpec } from './config/swagger';
 import authRoutes from './routes/auth';
 import transactionRoutes from './routes/transactions';
 import budgetRoutes from './routes/budgets';
@@ -18,6 +20,19 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  swaggerOptions: {
+    url: '/swagger.json',
+  },
+}));
+
+// Swagger JSON endpoint
+app.get('/swagger.json', (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
@@ -81,6 +96,7 @@ const startServer = async (): Promise<void> => {
       console.log(`🚀 Server running at http://localhost:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`📖 API: http://localhost:${PORT}/api/v1`);
+      console.log(`📚 Swagger Docs: http://localhost:${PORT}/api-docs`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
