@@ -211,3 +211,276 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
     });
   }
 };
+
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized',
+      });
+      return;
+    }
+
+    const { firstName, lastName, email } = req.body;
+
+    // Find user
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      res.status(404).json({
+        status: 'error',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Validate email if being updated
+    if (email && email !== user.email) {
+      const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+      if (!emailRegex.test(email)) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Invalid email format',
+        });
+        return;
+      }
+
+      // Check if email already exists
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser) {
+        res.status(409).json({
+          status: 'error',
+          message: 'Email already in use',
+        });
+        return;
+      }
+
+      user.email = email.toLowerCase();
+    }
+
+    // Update fields
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+
+    await user.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Profile updated successfully',
+      data: {
+        userId: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to update profile',
+    });
+  }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized',
+      });
+      return;
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    // Validation
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Current password and new password are required',
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      res.status(400).json({
+        status: 'error',
+        message: 'New password must be at least 8 characters',
+      });
+      return;
+    }
+
+    // Find user and include password
+    const user = await User.findById(req.user.userId).select('+password');
+    if (!user) {
+      res.status(404).json({
+        status: 'error',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Current password is incorrect',
+      });
+      return;
+    }
+
+    // Hash new password
+    const salt = await bcryptjs.genSalt(10);
+    user.password = await bcryptjs.hash(newPassword, salt);
+
+    await user.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password changed successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to change password',
+    });
+  }
+};
+
+export const deleteAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized',
+      });
+      return;
+    }
+
+    const userId = req.user.userId;
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({
+        status: 'error',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Delete all user's transactions and budgets (cascade delete)
+    const Transaction = require('../models/Transaction').default;
+    const Budget = require('../models/Budget').default;
+
+    await Transaction.deleteMany({ userId });
+    await Budget.deleteMany({ userId });
+
+    // Delete user
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Account deleted successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to delete account',
+    });
+  }
+};
+
+export const savePreferences = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized',
+      });
+      return;
+    }
+
+    const { emailNotifications, budgetAlerts, weeklyReport } = req.body;
+
+    // Validation
+    if (emailNotifications === undefined && budgetAlerts === undefined && weeklyReport === undefined) {
+      res.status(400).json({
+        status: 'error',
+        message: 'At least one preference must be provided',
+      });
+      return;
+    }
+
+    // Find user
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      res.status(404).json({
+        status: 'error',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Update preferences
+    if (emailNotifications !== undefined) user.preferences.emailNotifications = emailNotifications;
+    if (budgetAlerts !== undefined) user.preferences.budgetAlerts = budgetAlerts;
+    if (weeklyReport !== undefined) user.preferences.weeklyReport = weeklyReport;
+
+    await user.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Preferences saved successfully',
+      data: {
+        emailNotifications: user.preferences.emailNotifications,
+        budgetAlerts: user.preferences.budgetAlerts,
+        weeklyReport: user.preferences.weeklyReport,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to save preferences',
+    });
+  }
+};
+
+export const getPreferences = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized',
+      });
+      return;
+    }
+
+    // Find user
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      res.status(404).json({
+        status: 'error',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        emailNotifications: user.preferences.emailNotifications,
+        budgetAlerts: user.preferences.budgetAlerts,
+        weeklyReport: user.preferences.weeklyReport,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to fetch preferences',
+    });
+  }
+};

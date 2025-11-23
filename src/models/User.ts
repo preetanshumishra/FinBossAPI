@@ -1,11 +1,18 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcryptjs from 'bcryptjs';
 
+export interface IPreferences {
+  emailNotifications: boolean;
+  budgetAlerts: boolean;
+  weeklyReport: boolean;
+}
+
 export interface IUser extends Document {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
+  preferences: IPreferences;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -33,6 +40,27 @@ const userSchema = new Schema<IUser>(
     lastName: {
       type: String,
       required: [true, 'Last name is required'],
+    },
+    preferences: {
+      type: {
+        emailNotifications: {
+          type: Boolean,
+          default: true,
+        },
+        budgetAlerts: {
+          type: Boolean,
+          default: true,
+        },
+        weeklyReport: {
+          type: Boolean,
+          default: false,
+        },
+      },
+      default: () => ({
+        emailNotifications: true,
+        budgetAlerts: true,
+        weeklyReport: false,
+      }),
     },
   },
   {

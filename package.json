@@ -1,7 +1,7 @@
 {
   "name": "finbossapi",
-  "version": "1.0.0",
-  "description": "Personal Finance Tracker API - Backend for web and mobile apps",
+  "version": "1.1.0",
+  "description": "Personal Finance Management API with advanced analytics, spending forecasts, and user preferences",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",

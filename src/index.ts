@@ -11,6 +11,8 @@ import { swaggerSpec } from './config/swagger';
 import authRoutes from './routes/auth';
 import transactionRoutes from './routes/transactions';
 import budgetRoutes from './routes/budgets';
+import analyticsRoutes from './routes/analytics';
+import categoryRoutes from './routes/categories';
 import { seedCategories } from './utils/seedCategories';
 
 const app: Express = express();
@@ -64,6 +66,8 @@ app.get('/api/v1', (_req: Request, res: Response) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/budgets', budgetRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/categories', categoryRoutes);
 
 // 404 handler (must use middleware function, not route)
 app.use((_req: Request, res: Response) => {

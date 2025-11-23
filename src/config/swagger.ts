@@ -5,8 +5,8 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'FinBoss API',
-      version: '1.0.0',
-      description: 'Personal Finance Management API - Track income, expenses, budgets, and get financial insights',
+      version: '1.1.0',
+      description: 'Personal Finance Management API - Track income, expenses, budgets, analyze spending trends, and manage preferences with advanced analytics',
       contact: {
         name: 'FinBoss Support',
         email: 'support@finboss.com',
@@ -154,6 +154,95 @@ const options = {
             },
           },
         },
+        UserPreferences: {
+          type: 'object',
+          properties: {
+            emailNotifications: {
+              type: 'boolean',
+              example: true,
+            },
+            budgetAlerts: {
+              type: 'boolean',
+              example: true,
+            },
+            weeklyReport: {
+              type: 'boolean',
+              example: false,
+            },
+          },
+        },
+        TransactionTrend: {
+          type: 'object',
+          properties: {
+            date: {
+              type: 'string',
+              example: '2025-11-23',
+            },
+            income: {
+              type: 'number',
+              example: 1000.00,
+            },
+            expense: {
+              type: 'number',
+              example: 500.00,
+            },
+            balance: {
+              type: 'number',
+              example: 500.00,
+            },
+          },
+        },
+        SpendingForecast: {
+          type: 'object',
+          properties: {
+            historical_average: {
+              type: 'number',
+              example: 450.50,
+            },
+            projected_spending: {
+              type: 'number',
+              example: 450.50,
+            },
+            confidence: {
+              type: 'number',
+              example: 85,
+            },
+            months: {
+              type: 'number',
+              example: 1,
+            },
+          },
+        },
+        BudgetComparison: {
+          type: 'object',
+          properties: {
+            category: {
+              type: 'string',
+              example: 'Food & Dining',
+            },
+            budgeted: {
+              type: 'number',
+              example: 500.00,
+            },
+            actual: {
+              type: 'number',
+              example: 425.50,
+            },
+            variance: {
+              type: 'number',
+              example: 74.50,
+            },
+            variancePercent: {
+              type: 'number',
+              example: 14.9,
+            },
+            period: {
+              type: 'string',
+              enum: ['monthly', 'yearly'],
+              example: 'monthly',
+            },
+          },
+        },
         Error: {
           type: 'object',
           properties: {
@@ -174,6 +263,8 @@ const options = {
     './src/routes/auth.ts',
     './src/routes/transactions.ts',
     './src/routes/budgets.ts',
+    './src/routes/analytics.ts',
+    './src/routes/categories.ts',
     './src/index.ts',
   ],
 };

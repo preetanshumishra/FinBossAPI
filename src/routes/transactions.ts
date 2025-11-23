@@ -7,6 +7,8 @@ import {
   deleteTransaction,
   getTransactionSummary,
   getTransactionsByCategory,
+  getTransactionTrends,
+  getSpendingForecast,
 } from '../controllers/transactionController';
 import { authenticate } from '../middleware/auth';
 
@@ -21,6 +23,12 @@ router.get('/summary', getTransactionSummary);
 
 // Get transactions breakdown by category
 router.get('/analytics/category', getTransactionsByCategory);
+
+// Get transaction trends (daily/weekly/monthly aggregation)
+router.get('/trends', getTransactionTrends);
+
+// Get spending forecast (projection based on historical data)
+router.get('/forecast', getSpendingForecast);
 
 // List transactions with filters and pagination
 router.get('/', getTransactions);

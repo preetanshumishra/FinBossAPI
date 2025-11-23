@@ -5,10 +5,13 @@ A comprehensive personal finance management backend API built with Express.js, T
 ## Features
 
 - **User Authentication**: JWT-based authentication with access and refresh tokens
+- **User Profile Management**: Update profile, change password, delete account with cascade operations
+- **User Preferences**: Save and retrieve notification and alert preferences
 - **Transaction Management**: Track income and expenses with categories and dates
-- **Budget Management**: Set and monitor spending budgets with alerts
-- **Analytics**: Get insights on spending by category and transaction summaries
-- **Category System**: Pre-seeded default categories with icons and colors
+- **Advanced Analytics**: Spending trends, forecasting, and budget comparisons
+- **Budget Management**: Set and monitor spending budgets with alerts and analysis
+- **Category System**: Pre-seeded default categories with icons and colors, plus custom categories
+- **Analytics Insights**: Get insights on spending by category, transaction summaries, and forecasts
 
 ## Tech Stack
 
@@ -69,28 +72,46 @@ npm start
 
 ## API Endpoints
 
-### Authentication
+### Authentication (7 endpoints)
 - `POST /api/v1/auth/register` - Register a new user
 - `POST /api/v1/auth/login` - Login user
 - `POST /api/v1/auth/refresh` - Refresh access token
 - `GET /api/v1/auth/profile` - Get user profile (protected)
+- `PUT /api/v1/auth/profile` - Update user profile (protected)
+- `POST /api/v1/auth/change-password` - Change password (protected)
+- `DELETE /api/v1/auth/account` - Delete account and cascade delete all associated data (protected)
 
-### Transactions
-- `GET /api/v1/transactions` - Get all transactions (with filters)
+### User Preferences (2 endpoints)
+- `GET /api/v1/auth/preferences` - Get user preferences (protected)
+- `POST /api/v1/auth/preferences` - Save user preferences (protected)
+
+### Transactions (9 endpoints)
+- `GET /api/v1/transactions` - Get all transactions (with filters and pagination)
 - `POST /api/v1/transactions` - Create a new transaction
 - `GET /api/v1/transactions/:id` - Get transaction by ID
 - `PUT /api/v1/transactions/:id` - Update transaction
 - `DELETE /api/v1/transactions/:id` - Delete transaction
 - `GET /api/v1/transactions/summary` - Get income/expense summary
 - `GET /api/v1/transactions/analytics/category` - Get breakdown by category
+- `GET /api/v1/transactions/trends` - Get spending trends (daily/weekly/monthly)
+- `GET /api/v1/transactions/forecast` - Get spending forecast with confidence score
 
-### Budgets
+### Analytics (1 endpoint)
+- `GET /api/v1/analytics/budget-vs-actual` - Compare budgeted vs actual spending by category
+
+### Budgets (6 endpoints)
 - `GET /api/v1/budgets` - Get all budgets
 - `POST /api/v1/budgets` - Create a new budget
 - `GET /api/v1/budgets/:id` - Get budget details
 - `PUT /api/v1/budgets/:id` - Update budget
 - `DELETE /api/v1/budgets/:id` - Delete budget
 - `GET /api/v1/budgets/status/overview` - Get budget health status
+
+### Categories (4 endpoints)
+- `GET /api/v1/categories` - Get all categories (default and custom)
+- `POST /api/v1/categories` - Create custom category (protected)
+- `PUT /api/v1/categories/:id` - Update category (protected)
+- `DELETE /api/v1/categories/:id` - Delete custom category (protected)
 
 ## API Documentation
 
@@ -118,7 +139,9 @@ You can:
 - Password (hashed)
 - First name
 - Last name
+- Preferences (emailNotifications, budgetAlerts, weeklyReport)
 - Created at timestamp
+- Updated at timestamp
 
 ### Transaction
 - User ID (reference)
@@ -180,29 +203,52 @@ The API is deployed on [Railway](https://railway.app):
 
 ## Development Notes
 
-- All routes except `/health` require JWT authentication
-- Transactions and budgets are user-specific (filtered by userId)
+- All routes except `/health` and `GET /api/v1/categories` require JWT authentication
+- Transactions, budgets, and preferences are user-specific (filtered by userId)
 - Budget spending is calculated from matching transactions
+- Deleting a user cascades to delete all their transactions and budgets
 - 13 default categories are pre-seeded on server startup
+- Default categories cannot be modified or deleted
+- User preferences are stored server-side with defaults (emailNotifications: true, budgetAlerts: true, weeklyReport: false)
+- Transaction trends support daily, weekly, and monthly grouping
+- Spending forecasts are calculated from 3-month historical averages with confidence scoring
+- Budget vs actual comparisons show variance and variance percentages
 - Passwords are hashed with bcryptjs (salt rounds: 10)
 - Access tokens expire in 7 days
 - Refresh tokens expire in 30 days
 - TypeScript is compiled to JavaScript in the `dist/` folder
-- All code is type-safe with proper interfaces
+- All code is type-safe with proper interfaces and validation
 
 ## Project Structure
 
 ```
 src/
 ├── config/
-│   ├── database.ts       # MongoDB connection
-│   └── swagger.ts        # Swagger/OpenAPI configuration
-├── controllers/          # Business logic
-├── middleware/           # Express middleware
-├── models/               # Mongoose schemas
-├── routes/               # API endpoints
-├── utils/                # Helper functions
-└── index.ts              # Express app entry point
+│   ├── database.ts          # MongoDB connection
+│   └── swagger.ts           # Swagger/OpenAPI configuration
+├── controllers/
+│   ├── authController.ts    # Auth and profile management
+│   ├── transactionController.ts  # Transactions, trends, forecast
+│   ├── budgetController.ts  # Budget management
+│   ├── analyticsController.ts   # Budget vs actual analysis
+│   └── categoryController.ts    # Category CRUD operations
+├── middleware/
+│   └── auth.ts              # JWT authentication middleware
+├── models/
+│   ├── User.ts              # User schema with preferences
+│   ├── Transaction.ts       # Transaction schema
+│   ├── Budget.ts            # Budget schema
+│   └── Category.ts          # Category schema
+├── routes/
+│   ├── auth.ts              # Authentication routes
+│   ├── transactions.ts      # Transaction routes
+│   ├── budgets.ts           # Budget routes
+│   ├── analytics.ts         # Analytics routes
+│   └── categories.ts        # Category routes
+├── utils/
+│   ├── jwt.ts               # JWT token generation
+│   └── seedCategories.ts    # Default category seeding
+└── index.ts                 # Express app entry point
 ```
 
 ## Technologies Used

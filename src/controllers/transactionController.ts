@@ -391,3 +391,160 @@ export const getTransactionsByCategory = async (req: AuthRequest, res: Response)
     });
   }
 };
+
+export const getTransactionTrends = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized',
+      });
+      return;
+    }
+
+    const { startDate, endDate, groupBy = 'day', type } = req.query;
+
+    // Validation
+    if (!startDate || !endDate) {
+      res.status(400).json({
+        status: 'error',
+        message: 'startDate and endDate are required',
+      });
+      return;
+    }
+
+    if (!['day', 'week', 'month'].includes(groupBy as string)) {
+      res.status(400).json({
+        status: 'error',
+        message: 'groupBy must be "day", "week", or "month"',
+      });
+      return;
+    }
+
+    const filter: any = {
+      userId: req.user.userId,
+      date: {
+        $gte: new Date(startDate as string),
+        $lte: new Date(endDate as string),
+      },
+    };
+
+    if (type && ['income', 'expense'].includes(type as string)) {
+      filter.type = type;
+    }
+
+    // Determine grouping format based on groupBy parameter
+    let dateFormat: string;
+    switch (groupBy) {
+      case 'week':
+        dateFormat = '%Y-%W'; // Year and week number
+        break;
+      case 'month':
+        dateFormat = '%Y-%m'; // Year and month
+        break;
+      default:
+        dateFormat = '%Y-%m-%d'; // Year-month-day
+    }
+
+    const trends = await Transaction.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: { $dateToString: { format: dateFormat, date: '$date' } },
+          income: {
+            $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] },
+          },
+          expense: {
+            $sum: { $cond: [{ $eq: ['$type', 'expense'] }, '$amount', 0] },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          date: '$_id',
+          income: 1,
+          expense: 1,
+          balance: { $subtract: ['$income', '$expense'] },
+        },
+      },
+      { $sort: { date: 1 } },
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: trends,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to fetch trends',
+    });
+  }
+};
+
+export const getSpendingForecast = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized',
+      });
+      return;
+    }
+
+    const { months = 1, category } = req.query;
+
+    const monthNum = Math.min(12, Math.max(1, parseInt(months as string) || 1));
+
+    // Get last 3 months of data to calculate average
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+    const filter: any = {
+      userId: req.user.userId,
+      type: 'expense',
+      date: { $gte: threeMonthsAgo },
+    };
+
+    if (category && typeof category === 'string') {
+      filter.category = category;
+    }
+
+    const historicalData = await Transaction.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalExpense: { $sum: '$amount' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const totalExpense = historicalData[0]?.totalExpense || 0;
+    const count = historicalData[0]?.count || 0;
+
+    // Calculate monthly average
+    const monthlyAverage = count > 0 ? totalExpense / 3 : 0;
+    const projectedSpending = monthlyAverage * monthNum;
+
+    // Confidence based on data availability (0-100%)
+    const confidence = count > 10 ? 85 : count > 5 ? 65 : count > 0 ? 45 : 0;
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        historical_average: Math.round(monthlyAverage * 100) / 100,
+        projected_spending: Math.round(projectedSpending * 100) / 100,
+        confidence,
+        months: monthNum,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to fetch forecast',
+    });
+  }
+};
