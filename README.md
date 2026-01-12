@@ -294,6 +294,15 @@ curl https://finbossapi-production.up.railway.app/health
 2. Set the `Authorization` header with your JWT token from login/register
 3. Start testing endpoints
 
+## FinBoss Ecosystem
+
+This project is part of the FinBoss financial management ecosystem:
+
+- **[FinBossWeb](https://github.com/preetanshumishra/FinBossWeb)** - React web frontend
+- **[FinBossMobile](https://github.com/preetanshumishra/FinBossMobile)** - React Native mobile app (iOS/Android via Expo)
+- **[FinBossAndroid](https://github.com/preetanshumishra/FinBossAndroid)** - Native Android app (Kotlin + Jetpack Compose)
+- **[FinBossiOS](https://github.com/preetanshumishra/FinBossiOS)** - Native iOS app (Swift + SwiftUI)
+
 ## License
 
 MIT
