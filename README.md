@@ -267,7 +267,18 @@ src/
 ### Using Swagger UI
 Visit `https://finbossapi-production.up.railway.app/api-docs` and click "Try it out" on any endpoint.
 
-### Using cURL
+### Using cURL (Development)
+```bash
+# Register
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"Password123","firstName":"John","lastName":"Doe"}'
+
+# Health check
+curl http://localhost:5000/health
+```
+
+### Using cURL (Production)
 ```bash
 # Register
 curl -X POST https://finbossapi-production.up.railway.app/api/v1/auth/register \
