@@ -21,3 +21,10 @@
 *.gif binary
 *.zip binary
 *.jar binary
+
+# GitHub language detection
+node_modules/** linguist-vendored linguist-generated
+dist/** linguist-generated
+build/** linguist-generated
+coverage/** linguist-generated
+.next/** linguist-generated
