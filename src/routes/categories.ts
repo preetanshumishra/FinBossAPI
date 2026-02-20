@@ -5,12 +5,12 @@ import {
   updateCategory,
   deleteCategory,
 } from '../controllers/categoryController';
-import { authenticate } from '../middleware/auth';
+import { authenticate, optionalAuth } from '../middleware/auth';
 
 const router = express.Router();
 
-// Public route - get all categories
-router.get('/', getCategories);
+// Optional auth - returns defaults for unauthenticated, defaults + user's own for authenticated
+router.get('/', optionalAuth, getCategories);
 
 // Protected routes
 router.use(authenticate);

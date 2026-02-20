@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, ITokenPayload } from '../utils/jwt';
+import { getErrorMessage } from '../utils/errorResponse';
 
 export interface AuthRequest extends Request {
   user?: ITokenPayload;
@@ -29,7 +30,7 @@ export const authenticate = (
   } catch (error) {
     res.status(401).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Authentication failed',
+      message: getErrorMessage(error, 'Authentication failed'),
     });
   }
 };

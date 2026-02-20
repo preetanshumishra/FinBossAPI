@@ -5,6 +5,7 @@ export interface ICategory extends Document {
   icon: string;
   color: string;
   isDefault: boolean;
+  userId: mongoose.Types.ObjectId | null;
 }
 
 const categorySchema = new Schema<ICategory>(
@@ -12,7 +13,6 @@ const categorySchema = new Schema<ICategory>(
     name: {
       type: String,
       required: [true, 'Category name is required'],
-      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -29,10 +29,17 @@ const categorySchema = new Schema<ICategory>(
       type: Boolean,
       default: false,
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: false,
   }
 );
+
+categorySchema.index({ name: 1, userId: 1 }, { unique: true });
 
 export default mongoose.model<ICategory>('Category', categorySchema);

@@ -1,15 +1,26 @@
 import { Response } from 'express';
 import Category from '../models/Category';
 import { AuthRequest } from '../middleware/auth';
+import { isValidObjectId } from '../utils/validateObjectId';
+import { getErrorMessage } from '../utils/errorResponse';
 
 export const getCategories = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { type } = req.query;
 
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
 
     if (type && ['income', 'expense'].includes(type as string)) {
       filter.type = type;
+    }
+
+    if (req.user) {
+      filter.$or = [
+        { isDefault: true },
+        { userId: req.user.userId },
+      ];
+    } else {
+      filter.isDefault = true;
     }
 
     const categories = await Category.find(filter).sort({ name: 1 });
@@ -21,7 +32,7 @@ export const getCategories = async (req: AuthRequest, res: Response): Promise<vo
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch categories',
+      message: getErrorMessage(error, 'Failed to fetch categories'),
     });
   }
 };
@@ -49,9 +60,12 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    // Check if category already exists
+    const userId = req.user!.userId;
+
+    // Check if category already exists for this user or as a default
     const existingCategory = await Category.findOne({
       name: name.toLowerCase(),
+      $or: [{ userId }, { isDefault: true }],
     });
 
     if (existingCategory) {
@@ -67,6 +81,7 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
       icon,
       color,
       isDefault: false,
+      userId,
     });
 
     await category.save();
@@ -79,7 +94,7 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to create category',
+      message: getErrorMessage(error, 'Failed to create category'),
     });
   }
 };
@@ -87,9 +102,13 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
 export const updateCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, icon, color } = req.body;
+    if (!isValidObjectId(id, res)) return;
 
-    const category = await Category.findById(id);
+    const { name, icon, color } = req.body;
+    const userId = req.user!.userId;
+
+    // Only find categories owned by this user
+    const category = await Category.findOne({ _id: id, userId });
     if (!category) {
       res.status(404).json({
         status: 'error',
@@ -98,7 +117,6 @@ export const updateCategory = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    // Cannot update default categories
     if (category.isDefault) {
       res.status(403).json({
         status: 'error',
@@ -122,10 +140,11 @@ export const updateCategory = async (req: AuthRequest, res: Response): Promise<v
 
     // Update name if provided
     if (name) {
-      // Check if new name already exists
+      // Check if new name conflicts with user's own or default categories
       const existingCategory = await Category.findOne({
         name: name.toLowerCase(),
         _id: { $ne: id },
+        $or: [{ userId }, { isDefault: true }],
       });
 
       if (existingCategory) {
@@ -153,7 +172,7 @@ export const updateCategory = async (req: AuthRequest, res: Response): Promise<v
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to update category',
+      message: getErrorMessage(error, 'Failed to update category'),
     });
   }
 };
@@ -161,8 +180,12 @@ export const updateCategory = async (req: AuthRequest, res: Response): Promise<v
 export const deleteCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    if (!isValidObjectId(id, res)) return;
 
-    const category = await Category.findById(id);
+    const userId = req.user!.userId;
+
+    // Only find categories owned by this user
+    const category = await Category.findOne({ _id: id, userId });
     if (!category) {
       res.status(404).json({
         status: 'error',
@@ -171,7 +194,6 @@ export const deleteCategory = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    // Cannot delete default categories
     if (category.isDefault) {
       res.status(403).json({
         status: 'error',
@@ -189,7 +211,7 @@ export const deleteCategory = async (req: AuthRequest, res: Response): Promise<v
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to delete category',
+      message: getErrorMessage(error, 'Failed to delete category'),
     });
   }
 };

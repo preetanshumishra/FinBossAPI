@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import Budget from '../models/Budget';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
+import { isValidObjectId } from '../utils/validateObjectId';
+import { getErrorMessage } from '../utils/errorResponse';
 
 interface BudgetFilter {
   userId?: mongoose.Types.ObjectId;
@@ -80,7 +82,7 @@ export const createBudget = async (req: AuthRequest, res: Response): Promise<voi
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to create budget',
+      message: getErrorMessage(error, 'Failed to create budget'),
     });
   }
 };
@@ -105,22 +107,18 @@ export const getBudgets = async (req: AuthRequest, res: Response): Promise<void>
 
     const budgets = await Budget.find(filter).sort({ category: 1 });
 
-    // Calculate spent amount for each budget
-    const budgetsWithSpent = await Promise.all(
-      budgets.map(async (budget) => {
-        const spent = await calculateSpentAmount(
-          req.user!.userId,
-          budget.category,
-          budget.period
-        );
-        return {
-          ...budget.toObject(),
-          spent,
-          remaining: budget.limit - spent,
-          percentageUsed: (spent / budget.limit) * 100,
-        };
-      })
-    );
+    // Single aggregate to get all spent amounts instead of N+1 queries
+    const spentByCategory = await getSpentByCategory(req.user!.userId, budgets);
+
+    const budgetsWithSpent = budgets.map((budget) => {
+      const spent = spentByCategory.get(budgetSpentKey(budget.category, budget.period)) || 0;
+      return {
+        ...budget.toObject(),
+        spent,
+        remaining: budget.limit - spent,
+        percentageUsed: (spent / budget.limit) * 100,
+      };
+    });
 
     res.status(200).json({
       status: 'success',
@@ -129,7 +127,7 @@ export const getBudgets = async (req: AuthRequest, res: Response): Promise<void>
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch budgets',
+      message: getErrorMessage(error, 'Failed to fetch budgets'),
     });
   }
 };
@@ -145,6 +143,7 @@ export const getBudget = async (req: AuthRequest, res: Response): Promise<void> 
     }
 
     const { id } = req.params;
+    if (!isValidObjectId(id, res)) return;
 
     const budget = await Budget.findOne({
       _id: id,
@@ -177,7 +176,7 @@ export const getBudget = async (req: AuthRequest, res: Response): Promise<void> 
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch budget',
+      message: getErrorMessage(error, 'Failed to fetch budget'),
     });
   }
 };
@@ -193,6 +192,8 @@ export const updateBudget = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     const { id } = req.params;
+    if (!isValidObjectId(id, res)) return;
+
     const { limit, period } = req.body;
 
     const budget = await Budget.findOne({
@@ -251,7 +252,7 @@ export const updateBudget = async (req: AuthRequest, res: Response): Promise<voi
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to update budget',
+      message: getErrorMessage(error, 'Failed to update budget'),
     });
   }
 };
@@ -267,6 +268,7 @@ export const deleteBudget = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     const { id } = req.params;
+    if (!isValidObjectId(id, res)) return;
 
     const budget = await Budget.findOneAndDelete({
       _id: id,
@@ -289,7 +291,7 @@ export const deleteBudget = async (req: AuthRequest, res: Response): Promise<voi
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to delete budget',
+      message: getErrorMessage(error, 'Failed to delete budget'),
     });
   }
 };
@@ -306,29 +308,26 @@ export const getBudgetStatus = async (req: AuthRequest, res: Response): Promise<
 
     const budgets = await Budget.find({ userId: req.user.userId });
 
-    const budgetStatus = await Promise.all(
-      budgets.map(async (budget) => {
-        const spent = await calculateSpentAmount(
-          req.user!.userId,
-          budget.category,
-          budget.period
-        );
-        const isOverBudget = spent > budget.limit;
-        const isNearBudget = spent > budget.limit * 0.8; // 80% or more
+    // Single aggregate to get all spent amounts instead of N+1 queries
+    const spentByCategory = await getSpentByCategory(req.user!.userId, budgets);
 
-        return {
-          category: budget.category,
-          limit: budget.limit,
-          spent,
-          remaining: budget.limit - spent,
-          percentageUsed: (spent / budget.limit) * 100,
-          period: budget.period,
-          isOverBudget,
-          isNearBudget,
-          status: isOverBudget ? 'over' : isNearBudget ? 'warning' : 'ok',
-        };
-      })
-    );
+    const budgetStatus = budgets.map((budget) => {
+      const spent = spentByCategory.get(budgetSpentKey(budget.category, budget.period)) || 0;
+      const isOverBudget = spent > budget.limit;
+      const isNearBudget = spent > budget.limit * 0.8; // 80% or more
+
+      return {
+        category: budget.category,
+        limit: budget.limit,
+        spent,
+        remaining: budget.limit - spent,
+        percentageUsed: (spent / budget.limit) * 100,
+        period: budget.period,
+        isOverBudget,
+        isNearBudget,
+        status: isOverBudget ? 'over' : isNearBudget ? 'warning' : 'ok',
+      };
+    });
 
     // Sort by status: over > warning > ok
     const statusOrder = { over: 0, warning: 1, ok: 2 };
@@ -341,26 +340,61 @@ export const getBudgetStatus = async (req: AuthRequest, res: Response): Promise<
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch budget status',
+      message: getErrorMessage(error, 'Failed to fetch budget status'),
     });
   }
 };
 
-// Helper function to calculate spent amount for a category within period
+const getPeriodStart = (period: string): Date => {
+  const now = new Date();
+  if (period === 'monthly') {
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return new Date(now.getFullYear(), 0, 1);
+};
+
+const budgetSpentKey = (category: string, period: string): string => `${category}::${period}`;
+
+// Batch query: get spent amounts for all budgets in at most 2 aggregates (monthly + yearly)
+const getSpentByCategory = async (
+  userId: string,
+  budgets: { category: string; period: string }[]
+): Promise<Map<string, number>> => {
+  const result = new Map<string, number>();
+  const periods = [...new Set(budgets.map((b) => b.period))];
+
+  const aggregates = periods.map(async (period) => {
+    const periodStart = getPeriodStart(period);
+    const categories = budgets.filter((b) => b.period === period).map((b) => b.category);
+
+    const expenses = await Transaction.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          category: { $in: categories },
+          type: 'expense',
+          date: { $gte: periodStart },
+        },
+      },
+      { $group: { _id: '$category', total: { $sum: '$amount' } } },
+    ]);
+
+    for (const row of expenses) {
+      result.set(budgetSpentKey(row._id, period), row.total);
+    }
+  });
+
+  await Promise.all(aggregates);
+  return result;
+};
+
+// Helper function to calculate spent amount for a single budget (used by getBudget/updateBudget)
 const calculateSpentAmount = async (
   userId: string,
   category: string,
   period: string
 ): Promise<number> => {
-  const now = new Date();
-  let startDate: Date;
-
-  if (period === 'monthly') {
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  } else {
-    // yearly
-    startDate = new Date(now.getFullYear(), 0, 1);
-  }
+  const periodStart = getPeriodStart(period);
 
   const expenses = await Transaction.aggregate([
     {
@@ -368,7 +402,7 @@ const calculateSpentAmount = async (
         userId: new mongoose.Types.ObjectId(userId),
         category,
         type: 'expense',
-        date: { $gte: startDate },
+        date: { $gte: periodStart },
       },
     },
     {

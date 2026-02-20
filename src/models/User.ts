@@ -1,10 +1,16 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcryptjs from 'bcryptjs';
+import validator from 'validator';
 
 export interface IPreferences {
   emailNotifications: boolean;
   budgetAlerts: boolean;
   weeklyReport: boolean;
+}
+
+export interface IRefreshTokenEntry {
+  tokenHash: string;
+  createdAt: Date;
 }
 
 export interface IUser extends Document {
@@ -13,6 +19,7 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   preferences: IPreferences;
+  refreshTokens: IRefreshTokenEntry[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -25,12 +32,22 @@ const userSchema = new Schema<IUser>(
       required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
-      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email'],
+      validate: [validator.isEmail, 'Please provide a valid email'],
     },
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
+      minlength: [8, 'Password must be at least 8 characters'],
+      select: false,
+    },
+    refreshTokens: {
+      type: [
+        {
+          tokenHash: { type: String, required: true },
+          createdAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
       select: false,
     },
     firstName: {

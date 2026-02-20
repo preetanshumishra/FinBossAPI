@@ -2,6 +2,8 @@ import { Response } from 'express';
 import mongoose from 'mongoose';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
+import { isValidObjectId } from '../utils/validateObjectId';
+import { getErrorMessage } from '../utils/errorResponse';
 
 interface TransactionFilter {
   userId: mongoose.Types.ObjectId;
@@ -12,6 +14,8 @@ interface TransactionFilter {
     $lte?: Date;
   };
 }
+
+const isValidDate = (value: string): boolean => !isNaN(new Date(value).getTime());
 
 export const createTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -50,6 +54,14 @@ export const createTransaction = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
+    if (date && !isValidDate(date)) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Invalid date format',
+      });
+      return;
+    }
+
     const transaction = new Transaction({
       userId: req.user.userId,
       type,
@@ -69,7 +81,7 @@ export const createTransaction = async (req: AuthRequest, res: Response): Promis
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to create transaction',
+      message: getErrorMessage(error, 'Failed to create transaction'),
     });
   }
 };
@@ -100,9 +112,17 @@ export const getTransactions = async (req: AuthRequest, res: Response): Promise<
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) {
+        if (!isValidDate(startDate as string)) {
+          res.status(400).json({ status: 'error', message: 'Invalid startDate format' });
+          return;
+        }
         filter.date.$gte = new Date(startDate as string);
       }
       if (endDate) {
+        if (!isValidDate(endDate as string)) {
+          res.status(400).json({ status: 'error', message: 'Invalid endDate format' });
+          return;
+        }
         filter.date.$lte = new Date(endDate as string);
       }
     }
@@ -131,7 +151,7 @@ export const getTransactions = async (req: AuthRequest, res: Response): Promise<
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch transactions',
+      message: getErrorMessage(error, 'Failed to fetch transactions'),
     });
   }
 };
@@ -147,6 +167,7 @@ export const getTransaction = async (req: AuthRequest, res: Response): Promise<v
     }
 
     const { id } = req.params;
+    if (!isValidObjectId(id, res)) return;
 
     const transaction = await Transaction.findOne({
       _id: id,
@@ -168,7 +189,7 @@ export const getTransaction = async (req: AuthRequest, res: Response): Promise<v
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch transaction',
+      message: getErrorMessage(error, 'Failed to fetch transaction'),
     });
   }
 };
@@ -184,6 +205,8 @@ export const updateTransaction = async (req: AuthRequest, res: Response): Promis
     }
 
     const { id } = req.params;
+    if (!isValidObjectId(id, res)) return;
+
     const { type, amount, category, description, date } = req.body;
 
     // Find transaction first
@@ -232,6 +255,13 @@ export const updateTransaction = async (req: AuthRequest, res: Response): Promis
     }
 
     if (date) {
+      if (!isValidDate(date)) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Invalid date format',
+        });
+        return;
+      }
       transaction.date = new Date(date);
     }
 
@@ -245,7 +275,7 @@ export const updateTransaction = async (req: AuthRequest, res: Response): Promis
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to update transaction',
+      message: getErrorMessage(error, 'Failed to update transaction'),
     });
   }
 };
@@ -261,6 +291,7 @@ export const deleteTransaction = async (req: AuthRequest, res: Response): Promis
     }
 
     const { id } = req.params;
+    if (!isValidObjectId(id, res)) return;
 
     const transaction = await Transaction.findOneAndDelete({
       _id: id,
@@ -283,7 +314,7 @@ export const deleteTransaction = async (req: AuthRequest, res: Response): Promis
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to delete transaction',
+      message: getErrorMessage(error, 'Failed to delete transaction'),
     });
   }
 };
@@ -300,16 +331,25 @@ export const getTransactionSummary = async (req: AuthRequest, res: Response): Pr
 
     const { startDate, endDate } = req.query;
 
-    const filter: any = { userId: req.user.userId };
+    const filter: Record<string, unknown> = { userId: new mongoose.Types.ObjectId(req.user.userId) };
 
     if (startDate || endDate) {
-      filter.date = {};
+      const dateRange: Record<string, Date> = {};
       if (startDate) {
-        filter.date.$gte = new Date(startDate as string);
+        if (!isValidDate(startDate as string)) {
+          res.status(400).json({ status: 'error', message: 'Invalid startDate format' });
+          return;
+        }
+        dateRange.$gte = new Date(startDate as string);
       }
       if (endDate) {
-        filter.date.$lte = new Date(endDate as string);
+        if (!isValidDate(endDate as string)) {
+          res.status(400).json({ status: 'error', message: 'Invalid endDate format' });
+          return;
+        }
+        dateRange.$lte = new Date(endDate as string);
       }
+      filter.date = dateRange;
     }
 
     const [income, expense] = await Promise.all([
@@ -338,7 +378,7 @@ export const getTransactionSummary = async (req: AuthRequest, res: Response): Pr
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch summary',
+      message: getErrorMessage(error, 'Failed to fetch summary'),
     });
   }
 };
@@ -355,16 +395,25 @@ export const getTransactionsByCategory = async (req: AuthRequest, res: Response)
 
     const { startDate, endDate } = req.query;
 
-    const filter: any = { userId: req.user.userId };
+    const filter: Record<string, unknown> = { userId: new mongoose.Types.ObjectId(req.user.userId) };
 
     if (startDate || endDate) {
-      filter.date = {};
+      const dateRange: Record<string, Date> = {};
       if (startDate) {
-        filter.date.$gte = new Date(startDate as string);
+        if (!isValidDate(startDate as string)) {
+          res.status(400).json({ status: 'error', message: 'Invalid startDate format' });
+          return;
+        }
+        dateRange.$gte = new Date(startDate as string);
       }
       if (endDate) {
-        filter.date.$lte = new Date(endDate as string);
+        if (!isValidDate(endDate as string)) {
+          res.status(400).json({ status: 'error', message: 'Invalid endDate format' });
+          return;
+        }
+        dateRange.$lte = new Date(endDate as string);
       }
+      filter.date = dateRange;
     }
 
     const byCategory = await Transaction.aggregate([
@@ -387,7 +436,7 @@ export const getTransactionsByCategory = async (req: AuthRequest, res: Response)
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch category breakdown',
+      message: getErrorMessage(error, 'Failed to fetch category breakdown'),
     });
   }
 };
@@ -421,8 +470,17 @@ export const getTransactionTrends = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const filter: any = {
-      userId: req.user.userId,
+    if (!isValidDate(startDate as string)) {
+      res.status(400).json({ status: 'error', message: 'Invalid startDate format' });
+      return;
+    }
+    if (!isValidDate(endDate as string)) {
+      res.status(400).json({ status: 'error', message: 'Invalid endDate format' });
+      return;
+    }
+
+    const filter: Record<string, unknown> = {
+      userId: new mongoose.Types.ObjectId(req.user.userId),
       date: {
         $gte: new Date(startDate as string),
         $lte: new Date(endDate as string),
@@ -478,7 +536,7 @@ export const getTransactionTrends = async (req: AuthRequest, res: Response): Pro
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch trends',
+      message: getErrorMessage(error, 'Failed to fetch trends'),
     });
   }
 };
@@ -501,8 +559,8 @@ export const getSpendingForecast = async (req: AuthRequest, res: Response): Prom
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-    const filter: any = {
-      userId: req.user.userId,
+    const filter: Record<string, unknown> = {
+      userId: new mongoose.Types.ObjectId(req.user.userId),
       type: 'expense',
       date: { $gte: threeMonthsAgo },
     };
@@ -544,7 +602,7 @@ export const getSpendingForecast = async (req: AuthRequest, res: Response): Prom
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Failed to fetch forecast',
+      message: getErrorMessage(error, 'Failed to fetch forecast'),
     });
   }
 };

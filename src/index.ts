@@ -5,6 +5,9 @@ dotenv.config();
 
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import { sanitize } from './utils/sanitize';
+import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import { connectDatabase } from './config/database';
 import { swaggerSpec } from './config/swagger';
@@ -14,22 +17,64 @@ import budgetRoutes from './routes/budgets';
 import analyticsRoutes from './routes/analytics';
 import categoryRoutes from './routes/categories';
 import { seedCategories } from './utils/seedCategories';
+import { getErrorMessage } from './utils/errorResponse';
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust first proxy (Railway, Heroku, etc.) for correct IP in rate limiting
+app.set('trust proxy', 1);
+
+const getCorsOrigin = (): string | string[] | boolean => {
+  const corsOrigin = process.env.CORS_ORIGIN;
+  if (!corsOrigin) {
+    return process.env.NODE_ENV === 'production' ? false : '*';
+  }
+  if (corsOrigin.includes(',')) {
+    return corsOrigin.split(',').map((o) => o.trim());
+  }
+  return corsOrigin;
+};
+
+const origin = getCorsOrigin();
+
 const corsOptions = {
-  origin: '*',
-  credentials: false,
+  origin,
+  credentials: origin !== '*' && origin !== false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200,
 };
 
 // Middleware
+app.use(helmet());
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// Sanitize req.body to strip Mongo operator keys ($ and .).
+// Custom implementation because express-mongo-sanitize v2 is incompatible with Express 5.
+// req.query is safe in Express 5: values are always flat strings (no nested object injection).
+app.use((req: Request, _res: Response, next: (err?: unknown) => void) => {
+  if (req.body && typeof req.body === 'object') {
+    req.body = sanitize(req.body);
+  }
+  next();
+});
+
+// Global rate limiting: 100 requests per 15 minutes per IP (disabled in test)
+if (process.env.NODE_ENV !== 'test') {
+  const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: {
+      status: 'error',
+      message: 'Too many requests, please try again later',
+    },
+  });
+  app.use('/api/', globalLimiter);
+}
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -89,7 +134,7 @@ app.use(
     console.error('Error:', err);
     res.status(500).json({
       status: 'error',
-      message: err.message || 'Internal server error',
+      message: getErrorMessage(err, 'Internal server error'),
     });
   }
 );
@@ -116,6 +161,8 @@ const startServer = async (): Promise<void> => {
   }
 };
 
-startServer();
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 export default app;

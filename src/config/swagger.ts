@@ -14,7 +14,7 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:8080',
+        url: 'http://localhost:5000',
         description: 'Development server',
       },
       {
@@ -151,6 +151,12 @@ const options = {
             isDefault: {
               type: 'boolean',
               example: true,
+            },
+            userId: {
+              type: 'string',
+              nullable: true,
+              example: null,
+              description: 'Owner user ID (null for default categories)',
             },
           },
         },
