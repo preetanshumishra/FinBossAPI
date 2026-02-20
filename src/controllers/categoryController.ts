@@ -39,6 +39,11 @@ export const getCategories = async (req: AuthRequest, res: Response): Promise<vo
 
 export const createCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!req.user) {
+      res.status(401).json({ status: 'error', message: 'Unauthorized' });
+      return;
+    }
+
     const { name, type, icon, color } = req.body;
 
     // Validation
@@ -68,7 +73,7 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const userId = req.user!.userId;
+    const userId = req.user.userId;
 
     // Check if category already exists for this user or as a default
     const existingCategory = await Category.findOne({
@@ -110,11 +115,16 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
 
 export const updateCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!req.user) {
+      res.status(401).json({ status: 'error', message: 'Unauthorized' });
+      return;
+    }
+
     const { id } = req.params;
     if (!isValidObjectId(id, res)) return;
 
     const { name, icon, color } = req.body;
-    const userId = req.user!.userId;
+    const userId = req.user.userId;
 
     // Only find categories owned by this user
     const category = await Category.findOne({ _id: id, userId });
@@ -188,10 +198,15 @@ export const updateCategory = async (req: AuthRequest, res: Response): Promise<v
 
 export const deleteCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!req.user) {
+      res.status(401).json({ status: 'error', message: 'Unauthorized' });
+      return;
+    }
+
     const { id } = req.params;
     if (!isValidObjectId(id, res)) return;
 
-    const userId = req.user!.userId;
+    const userId = req.user.userId;
 
     // Only find categories owned by this user
     const category = await Category.findOne({ _id: id, userId });

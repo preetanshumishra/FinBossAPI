@@ -140,6 +140,11 @@ const options = {
               type: 'string',
               example: 'Food & Dining',
             },
+            type: {
+              type: 'string',
+              enum: ['income', 'expense'],
+              example: 'expense',
+            },
             icon: {
               type: 'string',
               example: '🍽️',

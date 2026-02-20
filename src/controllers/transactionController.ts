@@ -15,7 +15,12 @@ interface TransactionFilter {
   };
 }
 
-const isValidDate = (value: string): boolean => !isNaN(new Date(value).getTime());
+// Strict ISO 8601 date validation (YYYY-MM-DD or full ISO datetime)
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+const isValidDate = (value: string): boolean => {
+  if (!ISO_DATE_REGEX.test(value)) return false;
+  return !isNaN(new Date(value).getTime());
+};
 
 export const createTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

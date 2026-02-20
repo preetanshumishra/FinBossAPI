@@ -89,7 +89,30 @@ app.get('/swagger.json', (_req: Request, res: Response) => {
   res.send(swaggerSpec);
 });
 
-// Health check endpoint
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Server is running
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Server is running
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'success',
@@ -98,7 +121,30 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// API version endpoint
+/**
+ * @swagger
+ * /api/v1:
+ *   get:
+ *     summary: API version info
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: API version details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 version:
+ *                   type: string
+ *                   example: v1
+ *                 message:
+ *                   type: string
+ *                   example: FinBoss API v1
+ */
 app.get('/api/v1', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'success',

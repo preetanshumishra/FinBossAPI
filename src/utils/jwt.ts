@@ -65,11 +65,3 @@ export const verifyRefreshToken = (token: string): ITokenPayload => {
     throw new Error('Invalid or expired refresh token');
   }
 };
-
-export const decodeToken = (token: string): ITokenPayload | null => {
-  try {
-    return jwt.decode(token) as ITokenPayload;
-  } catch {
-    return null;
-  }
-};

@@ -23,6 +23,25 @@ export const register = async (req: AuthRequest, res: Response): Promise<void> =
       return;
     }
 
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+
+    if (!trimmedFirst || !trimmedLast) {
+      res.status(400).json({
+        status: 'error',
+        message: 'First name and last name cannot be blank',
+      });
+      return;
+    }
+
+    if (trimmedFirst.length > 50 || trimmedLast.length > 50) {
+      res.status(400).json({
+        status: 'error',
+        message: 'First name and last name cannot exceed 50 characters',
+      });
+      return;
+    }
+
     if (password.length < 8) {
       res.status(400).json({
         status: 'error',
@@ -58,8 +77,8 @@ export const register = async (req: AuthRequest, res: Response): Promise<void> =
     const user = new User({
       email: email.toLowerCase(),
       password: hashedPassword,
-      firstName,
-      lastName,
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
     });
 
     await user.save();
@@ -295,8 +314,28 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     // Update fields
-    if (firstName) user.firstName = firstName;
-    if (lastName) user.lastName = lastName;
+    if (firstName) {
+      const trimmed = firstName.trim();
+      if (!trimmed || trimmed.length > 50) {
+        res.status(400).json({
+          status: 'error',
+          message: 'First name must be 1-50 characters',
+        });
+        return;
+      }
+      user.firstName = trimmed;
+    }
+    if (lastName) {
+      const trimmed = lastName.trim();
+      if (!trimmed || trimmed.length > 50) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Last name must be 1-50 characters',
+        });
+        return;
+      }
+      user.lastName = trimmed;
+    }
 
     await user.save();
 

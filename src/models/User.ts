@@ -53,10 +53,14 @@ const userSchema = new Schema<IUser>(
     firstName: {
       type: String,
       required: [true, 'First name is required'],
+      trim: true,
+      maxlength: [50, 'First name cannot exceed 50 characters'],
     },
     lastName: {
       type: String,
       required: [true, 'Last name is required'],
+      trim: true,
+      maxlength: [50, 'Last name cannot exceed 50 characters'],
     },
     preferences: {
       type: {

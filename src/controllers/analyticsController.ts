@@ -5,6 +5,13 @@ import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 import { getErrorMessage } from '../utils/errorResponse';
 
+// Strict ISO 8601 date validation (YYYY-MM-DD or full ISO datetime)
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+const isValidDate = (value: string): boolean => {
+  if (!ISO_DATE_REGEX.test(value)) return false;
+  return !isNaN(new Date(value).getTime());
+};
+
 export const getBudgetVsActual = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
@@ -23,15 +30,15 @@ export const getBudgetVsActual = async (req: AuthRequest, res: Response): Promis
     if (startDate || endDate) {
       const dateRange: Record<string, Date> = {};
       if (startDate) {
-        if (isNaN(new Date(startDate as string).getTime())) {
-          res.status(400).json({ status: 'error', message: 'Invalid startDate format' });
+        if (!isValidDate(startDate as string)) {
+          res.status(400).json({ status: 'error', message: 'Invalid startDate format. Use ISO 8601 (YYYY-MM-DD)' });
           return;
         }
         dateRange.$gte = new Date(startDate as string);
       }
       if (endDate) {
-        if (isNaN(new Date(endDate as string).getTime())) {
-          res.status(400).json({ status: 'error', message: 'Invalid endDate format' });
+        if (!isValidDate(endDate as string)) {
+          res.status(400).json({ status: 'error', message: 'Invalid endDate format. Use ISO 8601 (YYYY-MM-DD)' });
           return;
         }
         dateRange.$lte = new Date(endDate as string);

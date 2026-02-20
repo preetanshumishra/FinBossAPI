@@ -37,21 +37,27 @@ export const authenticate = (
 
 export const optionalAuth = (
   req: AuthRequest,
-  _res: Response,
+  res: Response,
   next: NextFunction
 ): void => {
+  const authHeader = req.headers.authorization;
+
+  // No token provided — continue as unauthenticated
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  // Token was provided — must be valid
   try {
-    const authHeader = req.headers.authorization;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const decoded = verifyAccessToken(token);
-      req.user = decoded;
-    }
-
+    const token = authHeader.substring(7);
+    const decoded = verifyAccessToken(token);
+    req.user = decoded;
     next();
   } catch (error) {
-    // If token is invalid, just continue without user
-    next();
+    res.status(401).json({
+      status: 'error',
+      message: getErrorMessage(error, 'Invalid or expired token'),
+    });
   }
 };
