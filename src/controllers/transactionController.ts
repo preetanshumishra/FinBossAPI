@@ -428,15 +428,23 @@ export const getTransactionsByCategory = async (req: AuthRequest, res: Response)
           _id: '$category',
           total: { $sum: '$amount' },
           count: { $sum: 1 },
-          type: { $first: '$type' },
         },
       },
       { $sort: { total: -1 } },
     ]);
 
+    const grandTotal = byCategory.reduce((sum: number, c: { total: number }) => sum + c.total, 0);
+
+    const data = byCategory.map((c: { _id: string; total: number; count: number }) => ({
+      category: c._id,
+      amount: c.total,
+      percentage: grandTotal > 0 ? (c.total / grandTotal) * 100 : 0,
+      transactionCount: c.count,
+    }));
+
     res.status(200).json({
       status: 'success',
-      data: byCategory,
+      data,
     });
   } catch (error) {
     res.status(500).json({
