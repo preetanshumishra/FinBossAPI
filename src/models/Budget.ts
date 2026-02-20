@@ -5,7 +5,6 @@ export interface IBudget extends Document {
   category: string;
   limit: number;
   period: 'monthly' | 'yearly';
-  spent: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,11 +30,6 @@ const budgetSchema = new Schema<IBudget>(
       enum: ['monthly', 'yearly'],
       default: 'monthly',
       required: [true, 'Budget period is required'],
-    },
-    spent: {
-      type: Number,
-      default: 0,
-      min: [0, 'Spent amount cannot be negative'],
     },
   },
   {

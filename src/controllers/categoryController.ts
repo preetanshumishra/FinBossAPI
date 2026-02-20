@@ -39,13 +39,21 @@ export const getCategories = async (req: AuthRequest, res: Response): Promise<vo
 
 export const createCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, icon, color } = req.body;
+    const { name, type, icon, color } = req.body;
 
     // Validation
-    if (!name || !icon || !color) {
+    if (!name || !type || !icon || !color) {
       res.status(400).json({
         status: 'error',
-        message: 'Name, icon, and color are required',
+        message: 'Name, type, icon, and color are required',
+      });
+      return;
+    }
+
+    if (!['income', 'expense'].includes(type)) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Type must be either "income" or "expense"',
       });
       return;
     }
@@ -78,6 +86,7 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
 
     const category = new Category({
       name: name.toLowerCase(),
+      type,
       icon,
       color,
       isDefault: false,

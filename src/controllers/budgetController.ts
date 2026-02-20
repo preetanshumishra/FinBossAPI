@@ -69,7 +69,6 @@ export const createBudget = async (req: AuthRequest, res: Response): Promise<voi
       category,
       limit,
       period: period || 'monthly',
-      spent: 0,
     });
 
     await budget.save();

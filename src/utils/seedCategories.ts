@@ -1,34 +1,38 @@
 import Category from '../models/Category';
 
 export const DEFAULT_CATEGORIES = [
-  { name: 'Food & Dining', icon: '🍽️', color: '#FF6B6B', isDefault: true },
-  { name: 'Transportation', icon: '🚗', color: '#4ECDC4', isDefault: true },
-  { name: 'Entertainment', icon: '🎬', color: '#FFE66D', isDefault: true },
-  { name: 'Shopping', icon: '🛍️', color: '#FF69B4', isDefault: true },
-  { name: 'Utilities', icon: '💡', color: '#95E1D3', isDefault: true },
-  { name: 'Healthcare', icon: '🏥', color: '#FF6F91', isDefault: true },
-  { name: 'Education', icon: '📚', color: '#A8E6CF', isDefault: true },
-  { name: 'Travel', icon: '✈️', color: '#FFD3B6', isDefault: true },
-  { name: 'Subscriptions', icon: '📱', color: '#FFAAA5', isDefault: true },
-  { name: 'Salary', icon: '💰', color: '#6BCB77', isDefault: true },
-  { name: 'Freelance', icon: '💻', color: '#4D96FF', isDefault: true },
-  { name: 'Investment Returns', icon: '📈', color: '#FFD93D', isDefault: true },
-  { name: 'Other', icon: '📌', color: '#999999', isDefault: true },
+  { name: 'Food & Dining', type: 'expense', icon: '🍽️', color: '#FF6B6B', isDefault: true },
+  { name: 'Transportation', type: 'expense', icon: '🚗', color: '#4ECDC4', isDefault: true },
+  { name: 'Entertainment', type: 'expense', icon: '🎬', color: '#FFE66D', isDefault: true },
+  { name: 'Shopping', type: 'expense', icon: '🛍️', color: '#FF69B4', isDefault: true },
+  { name: 'Utilities', type: 'expense', icon: '💡', color: '#95E1D3', isDefault: true },
+  { name: 'Healthcare', type: 'expense', icon: '🏥', color: '#FF6F91', isDefault: true },
+  { name: 'Education', type: 'expense', icon: '📚', color: '#A8E6CF', isDefault: true },
+  { name: 'Travel', type: 'expense', icon: '✈️', color: '#FFD3B6', isDefault: true },
+  { name: 'Subscriptions', type: 'expense', icon: '📱', color: '#FFAAA5', isDefault: true },
+  { name: 'Salary', type: 'income', icon: '💰', color: '#6BCB77', isDefault: true },
+  { name: 'Freelance', type: 'income', icon: '💻', color: '#4D96FF', isDefault: true },
+  { name: 'Investment Returns', type: 'income', icon: '📈', color: '#FFD93D', isDefault: true },
+  { name: 'Other', type: 'expense', icon: '📌', color: '#999999', isDefault: true },
 ];
 
 export const seedCategories = async (): Promise<void> => {
   try {
-    // Check if categories already exist
-    const existingCount = await Category.countDocuments();
+    const ops = DEFAULT_CATEGORIES.map((cat) => ({
+      updateOne: {
+        filter: { name: cat.name.toLowerCase(), isDefault: true },
+        update: { $setOnInsert: { ...cat, name: cat.name.toLowerCase(), userId: null } },
+        upsert: true,
+      },
+    }));
 
-    if (existingCount > 0) {
-      console.log('✓ Categories already seeded, skipping...');
-      return;
+    const result = await Category.bulkWrite(ops);
+
+    if (result.upsertedCount > 0) {
+      console.log(`✓ Seeded ${result.upsertedCount} default categories`);
+    } else {
+      console.log('✓ All default categories already exist');
     }
-
-    // Insert default categories
-    await Category.insertMany(DEFAULT_CATEGORIES);
-    console.log(`✓ Successfully seeded ${DEFAULT_CATEGORIES.length} default categories`);
   } catch (error) {
     console.error('Failed to seed categories:', error instanceof Error ? error.message : error);
     throw error;

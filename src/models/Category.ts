@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICategory extends Document {
   name: string;
+  type: 'income' | 'expense';
   icon: string;
   color: string;
   isDefault: boolean;
@@ -15,6 +16,11 @@ const categorySchema = new Schema<ICategory>(
       required: [true, 'Category name is required'],
       lowercase: true,
       trim: true,
+    },
+    type: {
+      type: String,
+      enum: ['income', 'expense'],
+      required: [true, 'Category type is required'],
     },
     icon: {
       type: String,
