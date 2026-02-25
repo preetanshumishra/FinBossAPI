@@ -18,8 +18,8 @@ const options = {
         description: 'Development server',
       },
       {
-        url: 'https://finbossapi-production.up.railway.app',
-        description: 'Production server',
+        url: 'https://finbossapi-gx2r7kziwa-uc.a.run.app',
+        description: 'Production server (Google Cloud Run)',
       },
     ],
     components: {
