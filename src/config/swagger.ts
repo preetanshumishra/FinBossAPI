@@ -18,7 +18,7 @@ const options = {
         description: 'Development server',
       },
       {
-        url: 'https://finbossapi-gx2r7kziwa-uc.a.run.app',
+        url: 'https://finbossapi-618844932346.us-central1.run.app',
         description: 'Production server (Google Cloud Run)',
       },
     ],

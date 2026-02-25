@@ -26,9 +26,9 @@ A comprehensive personal finance management backend API built with Express.js, T
 ## Live API
 
 The API is currently live and running on Google Cloud Run:
-- **Base URL**: `https://finbossapi-gx2r7kziwa-uc.a.run.app`
-- **API Docs**: `https://finbossapi-gx2r7kziwa-uc.a.run.app/api-docs` (Swagger UI)
-- **OpenAPI Spec**: `https://finbossapi-gx2r7kziwa-uc.a.run.app/swagger.json`
+- **Base URL**: `https://finbossapi-618844932346.us-central1.run.app`
+- **API Docs**: `https://finbossapi-618844932346.us-central1.run.app/api-docs` (Swagger UI)
+- **OpenAPI Spec**: `https://finbossapi-618844932346.us-central1.run.app/swagger.json`
 
 ## Installation
 
@@ -118,8 +118,8 @@ npm start
 ### Swagger/OpenAPI
 
 The API includes comprehensive Swagger documentation:
-- **Interactive UI**: `https://finbossapi-gx2r7kziwa-uc.a.run.app/api-docs`
-- **OpenAPI Spec**: `https://finbossapi-gx2r7kziwa-uc.a.run.app/swagger.json`
+- **Interactive UI**: `https://finbossapi-618844932346.us-central1.run.app/api-docs`
+- **OpenAPI Spec**: `https://finbossapi-618844932346.us-central1.run.app/swagger.json`
 
 You can:
 - View all endpoints with descriptions
@@ -181,7 +181,7 @@ All API endpoints return consistent error responses:
 FinBossAPI is deployed on Google Cloud Run with continuous deployment via GitHub integration.
 
 **Production URL:**
-- Google Cloud Run: https://finbossapi-gx2r7kziwa-uc.a.run.app
+- Google Cloud Run: https://finbossapi-618844932346.us-central1.run.app
 
 ### Deployment Pipeline
 - **Platform**: Google Cloud Run (serverless)
@@ -273,7 +273,7 @@ src/
 ## Testing the API
 
 ### Using Swagger UI
-Visit `https://finbossapi-gx2r7kziwa-uc.a.run.app/api-docs` and click "Try it out" on any endpoint.
+Visit `https://finbossapi-618844932346.us-central1.run.app/api-docs` and click "Try it out" on any endpoint.
 
 ### Using cURL (Development)
 ```bash
@@ -289,16 +289,16 @@ curl http://localhost:5000/health
 ### Using cURL (Production)
 ```bash
 # Register
-curl -X POST https://finbossapi-gx2r7kziwa-uc.a.run.app/api/v1/auth/register \
+curl -X POST https://finbossapi-618844932346.us-central1.run.app/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"Password123","firstName":"John","lastName":"Doe"}'
 
 # Health check
-curl https://finbossapi-gx2r7kziwa-uc.a.run.app/health
+curl https://finbossapi-618844932346.us-central1.run.app/health
 ```
 
 ### Using Postman
-1. Import the OpenAPI spec: `https://finbossapi-gx2r7kziwa-uc.a.run.app/swagger.json`
+1. Import the OpenAPI spec: `https://finbossapi-618844932346.us-central1.run.app/swagger.json`
 2. Set the `Authorization` header with your JWT token from login/register
 3. Start testing endpoints
 
@@ -307,7 +307,7 @@ curl https://finbossapi-gx2r7kziwa-uc.a.run.app/health
 FinBossAPI is deployed on Google Cloud Run with continuous deployment via GitHub integration.
 
 **Production URL:**
-- Google Cloud Run: https://finbossapi-gx2r7kziwa-uc.a.run.app
+- Google Cloud Run: https://finbossapi-618844932346.us-central1.run.app
 
 ### Deployment Pipeline
 - **Platform**: Google Cloud Run (serverless)
